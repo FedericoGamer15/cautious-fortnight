@@ -20,7 +20,7 @@ export default async function handler(req, res) {
         
         // ¡NUEVA URL! Usamos el nuevo enrutador oficial de Hugging Face (router.huggingface.co/hf-inference)
         const response = await fetch(
-            "https://router.huggingface.co/hf-inference/models/stable-diffusion-v1-5/stable-diffusion-v1-5",
+            "https://router.huggingface.co/hf-inference/models/stabilityai/sdxl-turbo",
             {
                 headers: {
                     "Authorization": `Bearer ${hfToken}`,

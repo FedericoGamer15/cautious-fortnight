@@ -155,7 +155,7 @@
 
         // --- 2. PRERENDERIZADO VECTORIAL DE LA HORMIGA ---
         const antCanvas = document.createElement('canvas');
-        const antSize = 40;
+        const antSize = 25;
         antCanvas.width = antSize;
         antCanvas.height = antSize;
         const actx = antCanvas.getContext('2d');
@@ -194,7 +194,7 @@
         preRenderAnt();
 
         // --- 3. LÓGICA DEL ENJAMBRE ---
-        const MAX_ANTS = 2000;
+        const MAX_ANTS = 2000; // ¡Multiplicamos la densidad para no dejar huecos!
         let ants = [];
         let targets = [];
         let mode = 'face';
@@ -231,7 +231,7 @@
             octx.beginPath(); octx.moveTo(-30, -65); octx.quadraticCurveTo(-100, -160, -150, -110); octx.stroke();
             octx.beginPath(); octx.moveTo(30, -65); octx.quadraticCurveTo(100, -160, 150, -110); octx.stroke();
 
-            return extractPixels(octx, 400, 400);
+            return extractPixels(octx, 400, 400, 3);
         }
 
         // Generar Forma desde Texto Puro
@@ -247,8 +247,10 @@
                 octx.fillStyle = 'white';
                 octx.fillRect(0, 0, OFF_W, OFF_H);
                 
-                let fontSize = textStr.length > 10 ? 60 : 100;
-                octx.font = `bold ${fontSize}px "Segoe UI", Arial, sans-serif`;
+                // Ajustamos el tamaño de la fuente dinámicamente
+                let fontSize = textStr.length > 8 ? 60 : 100;
+                // Usamos un peso de fuente un poco más ligero para evitar manchas
+                octx.font = `800 ${fontSize}px "Segoe UI", Arial, sans-serif`;
                 octx.textAlign = "center";
                 octx.textBaseline = "middle";
                 octx.fillStyle = "black";
@@ -258,8 +260,11 @@
                 const imgData = octx.getImageData(0, 0, OFF_W, OFF_H).data;
                 const pts = [];
                 
-                for (let y = 0; y < OFF_H; y += 3) {
-                    for (let x = 0; x < OFF_W; x += 3) {
+                // ¡CORRECCIÓN AQUÍ! Escaneamos cada 6 píxeles en lugar de 3 para que las hormigas
+                // no se amontonen y la frase "HOLA ABUELA" se lea perfectamente.
+                const step = 6; 
+                for (let y = 0; y < OFF_H; y += step) {
+                    for (let x = 0; x < OFF_W; x += step) {
                         const r = imgData[(y * OFF_W + x) * 4];
                         if (r < 128) {
                             pts.push({ x: x - OFF_W/2, y: y - OFF_H/2 });
@@ -296,8 +301,10 @@
                     const imgData = octx.getImageData(0, 0, OFF_W, OFF_H).data;
                     const pts = [];
                     
-                    for (let y = 0; y < OFF_H; y += 3) {
-                        for (let x = 0; x < OFF_W; x += 3) {
+                    // Imágenes de IA pueden usar paso 3 o 4 para verse sólidas
+                    const step = 4;
+                    for (let y = 0; y < OFF_H; y += step) {
+                        for (let x = 0; x < OFF_W; x += step) {
                             const idx = (y * OFF_W + x) * 4;
                             const r = imgData[idx];
                             const g = imgData[idx+1];
@@ -316,11 +323,11 @@
             });
         }
 
-        function extractPixels(ctxExt, w, h) {
+        function extractPixels(ctxExt, w, h, step = 3) {
             const imgData = ctxExt.getImageData(0, 0, w, h).data;
             const pts = [];
-            for (let y = 0; y < h; y += 3) {
-                for (let x = 0; x < w; x += 3) {
+            for (let y = 0; y < h; y += step) {
+                for (let x = 0; x < w; x += step) {
                     const alpha = imgData[(y * w + x) * 4 + 3];
                     if (alpha > 100) {
                         pts.push({ x: x - w/2, y: y - h/2 });
@@ -357,7 +364,7 @@
             }
 
             if (resetPositions) {
-                const numAnts = Math.min(MAX_ANTS, targets.length);
+                const numAnts = Math.min(MAX_ANTS, targets.length + 150); // Extra para asegurar sobrantes
                 ants = [];
                 for (let i = 0; i < numAnts; i++) {
                     ants.push({
@@ -365,29 +372,31 @@
                         y: Math.random() * H,
                         angle: Math.random() * Math.PI * 2,
                         speed: 1.5 + Math.random() * 2,
-                        target: targets[i],
+                        target: targets[i % targets.length], // Repetimos puntos para superponer
                         state: 'wandering',
                         swarmDelay: 2000 + Math.random() * 3000, 
-                        jitterOff: Math.random() * 100
+                        jitterOff: Math.random() * 100,
+                        isRebel: Math.random() < 0.03 // 3% de hormigas "rebeldes" sobrantes
                     });
                 }
             } else {
                 ants.forEach((ant, i) => {
                     ant.target = targets[i % targets.length];
-                    ant.state = 'swarming';
+                    if (!ant.isRebel) ant.state = 'swarming';
                 });
                 
-                const targetAntsCount = Math.min(MAX_ANTS, targets.length);
+                const targetAntsCount = Math.min(MAX_ANTS, targets.length + 150);
                 while (ants.length < targetAntsCount) {
                     ants.push({
                         x: Math.random() * W,
                         y: Math.random() * H,
                         angle: Math.random() * Math.PI * 2,
                         speed: 1.5 + Math.random() * 2,
-                        target: targets[ants.length],
+                        target: targets[ants.length % targets.length],
                         state: 'swarming',
                         swarmDelay: 0, 
-                        jitterOff: Math.random() * 100
+                        jitterOff: Math.random() * 100,
+                        isRebel: Math.random() < 0.03
                     });
                 }
             }
@@ -402,7 +411,8 @@
             ctx.fillRect(0, 0, W, H);
 
             ants.forEach(ant => {
-                if (ant.state === 'wandering' && elapsed > ant.swarmDelay) {
+                // Las rebeldes nunca entran en estado 'swarming'
+                if (ant.state === 'wandering' && elapsed > ant.swarmDelay && !ant.isRebel) {
                     ant.state = 'swarming';
                 }
 
@@ -435,6 +445,9 @@
                         ant.state = 'settled';
                     }
                 } else if (ant.state === 'settled') {
+                    // Respaldo: si por error una rebelde se sentó, la liberamos
+                    if (ant.isRebel) ant.state = 'wandering';
+                    
                     ant.angle += (Math.random() - 0.5) * 0.2;
                     ant.x += Math.cos(ant.angle) * 0.4;
                     ant.y += Math.sin(ant.angle) * 0.4;
@@ -445,7 +458,7 @@
                 ctx.save();
                 ctx.translate(ant.x, ant.y);
                 ctx.rotate(ant.angle);
-                const scale = 0.5;
+                const scale = 0.65; // Aumentamos tamaño para que tapen bien los huecos
                 ctx.drawImage(antCanvas, - (antSize/2)*scale, - (antSize/2)*scale, antSize*scale, antSize*scale);
                 ctx.restore();
             });

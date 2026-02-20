@@ -13,7 +13,7 @@ export default async function handler(req, res) {
         
         // Usamos Stable Diffusion v1.5, el modelo gratuito más estable y permanente de Hugging Face
         const response = await fetch(
-            "https://api-inference.huggingface.co/models/runwayml/stable-diffusion-v1-5",
+            "https://api-inference.huggingface.co/models/stable-diffusion-v1-5/stable-diffusion-v1-5",
             {
                 headers: {
                     "Authorization": `Bearer ${hfToken}`,

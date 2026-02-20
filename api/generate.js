@@ -7,11 +7,18 @@ export default async function handler(req, res) {
     // Vercel tomará automáticamente la clave que guardaste en Environment Variables
     const hfToken = process.env.HUGGINGFACE_API_KEY;
 
+    // Validación extra: Si Vercel no encuentra la clave, avisará inmediatamente
+    if (!hfToken) {
+        return res.status(500).json({ 
+            error: "Falta configurar la variable HUGGINGFACE_API_KEY en Vercel." 
+        });
+    }
+
     try {
         // Generamos un prompt ultra-descriptivo para forzar una silueta pura
         const enhancedPrompt = `A high contrast solid black silhouette of ${prompt} on a pure white background. Minimalist vector art style, simple stencil shape, highly recognizable, no shading, no gradients, no borders.`;
         
-        // Usamos Stable Diffusion v1.5, el modelo gratuito más estable y permanente de Hugging Face
+        // Usamos el mirror oficial y abierto de Stable Diffusion v1.5 que encontraste
         const response = await fetch(
             "https://api-inference.huggingface.co/models/stable-diffusion-v1-5/stable-diffusion-v1-5",
             {
@@ -25,8 +32,15 @@ export default async function handler(req, res) {
         );
 
         if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Hugging Face Error (${response.status}): ${errorText.substring(0, 150)}`);
+            // Intentamos extraer el error exacto que envía Hugging Face para saber qué pasa
+            const errorData = await response.json().catch(() => ({}));
+            
+            // Hugging Face a veces "apaga" los modelos si nadie los usa. Si está despertando, avisamos.
+            if (errorData.error && errorData.error.includes("is currently loading")) {
+                throw new Error("La IA se está despertando. Por favor, espera 15 segundos y vuelve a intentar.");
+            }
+            
+            throw new Error(`Fallo en Hugging Face: ${errorData.error || response.statusText}`);
         }
 
         // Convertir la imagen descargada a formato Base64 para mandarla al frontend

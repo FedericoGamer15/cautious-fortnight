@@ -18,9 +18,9 @@ export default async function handler(req, res) {
         // Generamos un prompt ultra-descriptivo para forzar una silueta pura
         const enhancedPrompt = `A high contrast solid black silhouette of ${prompt} on a pure white background. Minimalist vector art style, simple stencil shape, highly recognizable, no shading, no gradients, no borders.`;
         
-        // Usamos el mirror oficial y abierto de Stable Diffusion v1.5 que encontraste
+        // ¡NUEVA URL! Usamos el nuevo enrutador oficial de Hugging Face (router.huggingface.co/hf-inference)
         const response = await fetch(
-            "https://api-inference.huggingface.co/models/stable-diffusion-v1-5/stable-diffusion-v1-5",
+            "https://router.huggingface.co/hf-inference/models/stable-diffusion-v1-5/stable-diffusion-v1-5",
             {
                 headers: {
                     "Authorization": `Bearer ${hfToken}`,
